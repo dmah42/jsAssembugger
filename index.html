@@ -1,14 +1,23 @@
 <html>
     <head>
+        <script src="memory.js"></script>
+        <script src="asm6502.js"></script>
+        <script src="asmARM.js"></script>
+        <script src="asmMIPS.js"></script>
+        <script src="asmTHUMB.js"></script>
+        <script src="asmX86.js"></script>
+        <script src="http://code.jquery.com/jquery-latest.js"></script>
         <script>            
-            var asm_ = [
+            var asm_ = {
                 "6502" : new Asm6502(),
                 "ARM" : new AsmARM(),
-                "THUMB" : new AsmTHUMB(),
                 "MIPS" : new AsmMIPS(),
+                "THUMB" : new AsmTHUMB(),
                 "x86" : new AsmX86()
-            ];
+            };
             var current_asm_ = "6502";
+            
+            var memory_ = new Memory();
             
             function build_page() {
                 // Build asm select.
@@ -16,8 +25,8 @@
                 for (var key in asm_) {
                     var option = document.createElement('option');
                     option.value = key;
-                    option.innerText = document.createTextNode(key);
-                    if (key === current_asm)
+                    option.appendChild(document.createTextNode(key));
+                    if (key === current_asm_)
                         option.selected = 'selected';
                     asm_select.appendChild(option);
                 }
@@ -59,13 +68,17 @@
                     rebuild_page();
                 }
             }
-            
-            window.onload = build_page();
+              
+            $(document).ready(build_page);
         </script>
     </head>
     <body>
         <div id="control_panel">
-            <select id="asm_select" onchange="on_asm_changed();"></select>
+            <form>
+                <select id="asm_select" onchange="on_asm_changed();"></select>
+                <button id="continue_button" onclick="on_continue_click();">Continue</button>
+                <button id="step_button" onclick="on_step_click();">Step</button>
+            </form>
         </div>
         <textarea id="code_entry"></textarea>
         <table id="registers"></table>
