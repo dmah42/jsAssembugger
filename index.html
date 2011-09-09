@@ -1,0 +1,75 @@
+<html>
+    <head>
+        <script>            
+            var asm_ = [
+                "6502" : new Asm6502(),
+                "ARM" : new AsmARM(),
+                "THUMB" : new AsmTHUMB(),
+                "MIPS" : new AsmMIPS(),
+                "x86" : new AsmX86()
+            ];
+            var current_asm_ = "6502";
+            
+            function build_page() {
+                // Build asm select.
+                var asm_select = document.getElementById('asm_select');
+                for (var key in asm_) {
+                    var option = document.createElement('option');
+                    option.value = key;
+                    option.innerText = document.createTextNode(key);
+                    if (key === current_asm)
+                        option.selected = 'selected';
+                    asm_select.appendChild(option);
+                }
+                // Build the rest of the page.
+                rebuild_page();
+            }
+            
+            function rebuild_page() {
+                // TODO: warn before clearing text.
+                var code_entry = document.getElementById('code_entry');
+                code_entry.text = '';
+                
+                var registers = document.getElementById('registers');
+                asm_[current_asm_].build_register_table(registers);
+                
+                var memory_text = document.getElementById('memory_text');
+                memory_text.text = '';
+                
+                var memory_video = document.getElementById('memory_video');
+ 
+                if (elem && elem.getContext) {
+                    var context = memory_video.getContext('2d');
+                    if (context) {
+                        context.fillStyle('#000');
+                        context.fillRect(0, 0, memory_video.width, memory_video.height);
+                    }
+                }
+            }
+            
+            function get_selected_asm() {
+                var asm_select = document.getElementById('asm_select');
+                return asm_select.options[asm_select.selectedIndex].value;
+            }
+            
+            function on_asm_changed() {
+                var selected_asm = get_selected_asm();
+                if (selected_asm !== current_asm_) {
+                    current_asm_ = selected_asm;
+                    rebuild_page();
+                }
+            }
+            
+            window.onload = build_page();
+        </script>
+    </head>
+    <body>
+        <div id="control_panel">
+            <select id="asm_select" onchange="on_asm_changed();"></select>
+        </div>
+        <textarea id="code_entry"></textarea>
+        <table id="registers"></table>
+        <textarea id="memory_text"></textarea>
+        <canvas id="memory_video" width="256" height="256"></canvas>
+    </body>
+</html>
