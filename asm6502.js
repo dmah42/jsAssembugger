@@ -16,7 +16,7 @@ Asm6502 = {
     INDIRECT_X: 5,
     INDIRECT_Y: 6
   },
-
+  
   initialize: function() {
     Asm6502.r_.A = 0;
     Asm6502.r_.X = Asm6502.r_.Y = 0;
@@ -51,53 +51,21 @@ Asm6502 = {
     }
   },
 
-  setCarryFlag: function(b) {
-    if (b)
-			Asm6502.r_.P |= 1 << 0;
-		else
-			Asm6502.r_.P &= ~(1 << 0);
+  Flags {
+    CARRY: 0,
+    ZERO: 1,
+    INTERRUPT: 2,
+    DECIMAL: 3,
+    BREAK: 4,
+    OVERFLOW: 6,
+    NEGATIVE: 7
   },
 
-  setZeroFlag: function(b) {
+  setFlag: function(f, b) {
 		if (b)
-			Asm6502.r_.P |= 1 << 1;
-		else
-			Asm6502.r_.P &= ~(1 << 1);
-  },
-  
-  setInterruptFlag: function(b) {
-    if (b)
-			Asm6502.r_.P |= 1 << 2;
-		else
-			Asm6502.r_.P &= ~(1 << 2);
-  },
-  
-  setDecimalFlag: function(b) {
-    if (b)
-			Asm6502.r_.P |= 1 << 3;
-		else
-			Asm6502.r_.P &= ~(1 << 3);
-  },
-  
-  setBreakFlag: function(b) {
-    if (b)
-			Asm6502.r_.P |= 1 << 4;
-		else
-			Asm6502.r_.P &= ~(1 << 4);
-  },
-  
-  setOverflowFlag: function(b) {
-    if (b)
-			Asm6502.r_.P |= 1 << 6;
-		else
-			Asm6502.r_.P &= ~(1 << 6);
-  },
-  
-  setNegativeFlag: function(b) {
-		if (b)
-			Asm6502.r_.P |= 1 << 7;
-		else
-			Asm6502.r_.P &= ~(1 << 7);
+      Asm6502.r_.P |= 1 << Asm6502.Flags[f];
+    else
+      Asm6502.r_.P &= ~(1 << Asm6502.Flags[f]);
   },
 
   // TODO: page crossing cycle counts.
@@ -153,8 +121,8 @@ Asm6502 = {
       var addr_mode = Asm6502.getAddressingMode(operands);
       var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
       Asm6502.r_.A = value;
-      Asm6502.setZeroFlag(value === 0);
-      Asm6502.setNegativeFlag((value >> 7) == 1);
+      Asm6502.setFlag(Asm6502.Flags.ZERO, value === 0);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (value >> 7) == 1);
       return addr_mode.cycles;
     },
     
@@ -167,8 +135,8 @@ Asm6502 = {
 
       var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
       Asm6502.r_.X = value;
-      Asm6502.setZeroFlag(value === 0);
-      Asm6502.setNegativeFlag((value >> 7) == 1);
+      Asm6502.setFlag(Asm6502.Flags.ZERO, value === 0);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (value >> 7) == 1);
       return addr_mode.cycles;
     },
     
@@ -181,8 +149,8 @@ Asm6502 = {
 
       var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
       Asm6502.r_.Y = value;
-      Asm6502.setZeroFlag(value === 0);
-      Asm6502.setNegativeFlag((value >> 7) == 1);
+      Asm6502.setFlag(Asm6502.Flags.ZERO, value === 0);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (value >> 7) == 1);
       return addr_mode.cycles;
     },
     
