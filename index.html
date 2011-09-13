@@ -34,6 +34,7 @@
         
 				var code_entry = document.getElementById('code_entry');
         code_entry.onkeydown = checkTab;
+        code_entry.innerText = 'LDA #42\nPHA\nLDX #2A\nSTX $00\nLDA $00\nPLA';
 
         // Build the rest of the page.
         rebuild_page();
@@ -84,7 +85,7 @@
         }
         
         // Check for 'start' label.
-        var execution_line_ = 0;
+        execution_line_ = 0;
         if (labels_['start'] != undefined)
           execution_line_ = labels_['start'] + 1;
         
@@ -95,6 +96,7 @@
         var line = lines_[execution_line_];
         
         var instruction = line.split(' ')[0];
+        console.debug('Executing ' + line);
         var op = asm_[current_asm_].instruction_map_[instruction];
         if (op === undefined || op === null) {
           console.error('unknown instruction \'' + instruction + '\'');
@@ -103,19 +105,19 @@
         
         try {
           var time_taken = op(line.split(' ')[1]);
-          // TODO: skip comments and branch labels.
+          var registers = document.getElementById('registers');
+          asm_[current_asm_].updateRegisterView(registers);
+
+          // Queue up the next instruction
+          // TODO: skip comments, blank lines and branch labels.
           ++execution_line_;
           
-          // FIXME: exiting one line too early or calling the timeout one time too many.
-          if (execution_line_ == lines_.length) {
+          if (lines_[execution_line_] === undefined) {
             console.log('COMPLETE');
             return;
           }
           
-          window.setTimeout(execute_line, time_taken);
-                  
-          var registers = document.getElementById('registers');
-          asm_[current_asm_].updateRegisterView(registers);
+          window.setTimeout(execute_line, time_taken);        
         } catch (e) {
           if (e.stack)
             console.error(e.stack);

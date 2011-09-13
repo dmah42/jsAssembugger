@@ -21,7 +21,7 @@ Asm6502 = {
     Asm6502.r_.A = 0;
     Asm6502.r_.X = Asm6502.r_.Y = 0;
     Asm6502.r_.P = 0;
-    Asm6502.r_.S = 0x0100;
+    Asm6502.r_.S = 0;
     Asm6502.r_.PC = 0;
   },
   
@@ -51,7 +51,7 @@ Asm6502 = {
     }
   },
 
-  Flags {
+  Flags: {
     CARRY: 0,
     ZERO: 1,
     INTERRUPT: 2,
@@ -254,8 +254,8 @@ Asm6502 = {
     'PLA': function(operands) {
       --Asm6502.r_.S;
       Asm6502.r_.A = Memory.readByte(0x0100 + Asm6502.r_.S);
-      SetFlag(Asm6502.Flags.ZERO, Asm6502.r_.A === 0);
-      SetFlag(Asm6502.Flags.NEGATIVE, (Asm6502.r_.A >> 7) === 1);
+      Asm6502.setFlag(Asm6502.Flags.ZERO, Asm6502.r_.A === 0);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (Asm6502.r_.A >> 7) === 1);
       return 4;
     },
     
