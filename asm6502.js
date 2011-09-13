@@ -161,6 +161,7 @@ Asm6502 = {
         throw 'Invalid immediate addressing mode for STA';
 
       Memory.writeByte(addr_mode.address, Asm6502.r_.A);
+      return addr_mode.cycles;
     },
     
     // Store X
@@ -173,6 +174,7 @@ Asm6502 = {
       }
 
       Memory.writeByte(addr_mode.address, Asm6502.r_.X);
+      return addr_mode.cycles;
     },
     
     // Store Y
@@ -185,6 +187,7 @@ Asm6502 = {
       }
 
       Memory.writeByte(addr_mode.address, Asm6502.r_.Y);
+      return addr_mode.cycles;
     },
     
     // Transfer accumulator to X
@@ -192,6 +195,7 @@ Asm6502 = {
       Asm6502.r_.X = Asm6502.r_.A;
       SetFlag(Asm6502.Flags.ZERO, Asm6502.r_.X === 0);
       SetFlag(Asm6502.Flags.NEGATIVE, (Asm6502.r_.X >> 7) === 1);
+      return 2;
     },
     
     // Transfer accumulator to Y
@@ -199,6 +203,7 @@ Asm6502 = {
       Asm6502.r_.Y = Asm6502.r_.A;
       SetFlag(Asm6502.Flags.ZERO, Asm6502.r_.Y === 0);
       SetFlag(Asm6502.Flags.NEGATIVE, (Asm6502.r_.Y >> 7) === 1);
+      return 2;
     },
     
     // Transfer X to accumulator
@@ -206,6 +211,7 @@ Asm6502 = {
       Asm6502.r_.A = Asm6502.r_.X;
       SetFlag(Asm6502.Flags.ZERO, Asm6502.r_.A === 0);
       SetFlag(Asm6502.Flags.NEGATIVE, (Asm6502.r_.A >> 7) === 1);
+      return 2;
     },
     
     // Transfer Y to accumulator
@@ -213,6 +219,7 @@ Asm6502 = {
       Asm6502.r_.A = Asm6502.r_.Y;
       SetFlag(Asm6502.Flags.ZERO, Asm6502.r_.A === 0);
       SetFlag(Asm6502.Flags.NEGATIVE, (Asm6502.r_.A >> 7) === 1);
+      return 2;
     },
     
     // Transfer stack pointer to X
@@ -220,12 +227,43 @@ Asm6502 = {
       Asm6502.r_.X = Asm6502.r_.S;
       SetFlag(Asm6502.Flags.ZERO, Asm6502.r_.X === 0);
       SetFlag(Asm6502.Flags.NEGATIVE, (Asm6502.r_.X >> 7) === 1);
+      return 2;
     },
     
     // Transfer X to stack pointer
     'TXS': function(operands) {
       Asm6502.r_.S = Asm6502.r_.X;
-    }
+      return 2;
+    },
+    
+    // Push accumulator
+    'PHA': function(operands) {
+      Memory.writeByte(0x0100 + Asm6502.r_.S, Asm6502.r_.A);
+      ++Asm6502.r_.S;
+      return 3;
+    },
 
+    // Push status register
+    'PHP': function(operands) {
+      Memory.writeByte(0x0100 + Asm6502.r_.S, Asm6502.r_.P);
+      ++Asm6502.r_.S;
+      return 3;
+    },
+
+    // Pull accumulator
+    'PLA': function(operands) {
+      --Asm6502.r_.S;
+      Asm6502.r_.A = Memory.readByte(0x0100 + Asm6502.r_.S);
+      SetFlag(Asm6502.Flags.ZERO, Asm6502.r_.A === 0);
+      SetFlag(Asm6502.Flags.NEGATIVE, (Asm6502.r_.A >> 7) === 1);
+      return 4;
+    },
+    
+    // Pull status register
+    'PLP': function(operands) {
+      --Asm6502.r_.S;
+      Asm6502.r_.P = Memory.readByte(0x0100 + Asm6502.r_.S);
+      return 4;
+    }
   }
 };
