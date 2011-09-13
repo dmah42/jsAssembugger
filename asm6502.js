@@ -1,10 +1,10 @@
 Asm6502 = {
   r_: {
-    A: 0,        // 8-bit accumulator
+    A: 0,       // 8-bit accumulator
     X: 0, Y: 0, // 8-bit index
-    P: 0,        // 8-bit status
-    S: 0x0100,   // 8-bit stack hard-wired from 0x0100 to 0x01FF
-    PC: 0        // 16-bit program counter
+    P: 0,       // 8-bit status
+    S: 0,       // 8-bit stack hard-wired from 0x0100 to 0x01FF
+    PC: 0       // 16-bit program counter
   },
   
   AddressingMode: {
@@ -47,7 +47,7 @@ Asm6502 = {
     // TODO: switch between hex and dec
     for (var reg in Asm6502.r_) {
       var cell = document.getElementById(reg + '.value');
-      cell.innerHTML = '0x' + decToHex(Asm6502.r_[reg], (reg === 'S' ? 4 : 2));
+      cell.innerHTML = '0x' + (reg === 'S' ? '01' : '') + decToHex(Asm6502.r_[reg], 2);
     }
   },
 
@@ -122,7 +122,7 @@ Asm6502 = {
       var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
       Asm6502.r_.A = value;
       Asm6502.setFlag(Asm6502.Flags.ZERO, value === 0);
-      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (value >> 7) == 1);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (value >> 7) === 1);
       return addr_mode.cycles;
     },
     
@@ -136,7 +136,7 @@ Asm6502 = {
       var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
       Asm6502.r_.X = value;
       Asm6502.setFlag(Asm6502.Flags.ZERO, value === 0);
-      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (value >> 7) == 1);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (value >> 7) === 1);
       return addr_mode.cycles;
     },
     
@@ -150,7 +150,7 @@ Asm6502 = {
       var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
       Asm6502.r_.Y = value;
       Asm6502.setFlag(Asm6502.Flags.ZERO, value === 0);
-      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (value >> 7) == 1);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (value >> 7) === 1);
       return addr_mode.cycles;
     },
     
@@ -185,6 +185,47 @@ Asm6502 = {
       }
 
       Memory.writeByte(addr_mode.address, Asm6502.r_.Y);
+    },
+    
+    // Transfer accumulator to X
+    'TAX': function(operands) {
+      Asm6502.r_.X = Asm6502.r_.A;
+      SetFlag(Asm6502.Flags.ZERO, Asm6502.r_.X === 0);
+      SetFlag(Asm6502.Flags.NEGATIVE, (Asm6502.r_.X >> 7) === 1);
+    },
+    
+    // Transfer accumulator to Y
+    'TAY': function(operands) {
+      Asm6502.r_.Y = Asm6502.r_.A;
+      SetFlag(Asm6502.Flags.ZERO, Asm6502.r_.Y === 0);
+      SetFlag(Asm6502.Flags.NEGATIVE, (Asm6502.r_.Y >> 7) === 1);
+    },
+    
+    // Transfer X to accumulator
+    'TXA': function(operands) {
+      Asm6502.r_.A = Asm6502.r_.X;
+      SetFlag(Asm6502.Flags.ZERO, Asm6502.r_.A === 0);
+      SetFlag(Asm6502.Flags.NEGATIVE, (Asm6502.r_.A >> 7) === 1);
+    },
+    
+    // Transfer Y to accumulator
+    'TYA': function(operands) {
+      Asm6502.r_.A = Asm6502.r_.Y;
+      SetFlag(Asm6502.Flags.ZERO, Asm6502.r_.A === 0);
+      SetFlag(Asm6502.Flags.NEGATIVE, (Asm6502.r_.A >> 7) === 1);
+    },
+    
+    // Transfer stack pointer to X
+    'TSX': function(operands) {
+      Asm6502.r_.X = Asm6502.r_.S;
+      SetFlag(Asm6502.Flags.ZERO, Asm6502.r_.X === 0);
+      SetFlag(Asm6502.Flags.NEGATIVE, (Asm6502.r_.X >> 7) === 1);
+    },
+    
+    // Transfer X to stack pointer
+    'TXS': function(operands) {
+      Asm6502.r_.S = Asm6502.r_.X;
     }
+
   }
 };
