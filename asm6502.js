@@ -116,6 +116,7 @@ Asm6502 = {
   // TODO: Track size of instructions so relative branchs work.
   // TODO: Pass allowed addressing modes to getAddressingMode to minimize regexpv
   instruction_map_: {
+    // MEMORY INSTRUCTIONS
     // Load Accumulator
     'LDA': function(operands) {
       var addr_mode = Asm6502.getAddressingMode(operands);
@@ -190,6 +191,7 @@ Asm6502 = {
       return addr_mode.cycles;
     },
     
+    // REGISTER INSTRUCTIONS
     // Transfer accumulator to X
     'TAX': function(operands) {
       Asm6502.r_.X = Asm6502.r_.A;
@@ -236,6 +238,7 @@ Asm6502 = {
       return 2;
     },
     
+    // STACK INSTRUCTIONS
     // Push accumulator
     'PHA': function(operands) {
       Memory.writeByte(0x0100 + Asm6502.r_.S, Asm6502.r_.A);
@@ -264,6 +267,40 @@ Asm6502 = {
       --Asm6502.r_.S;
       Asm6502.r_.P = Memory.readByte(0x0100 + Asm6502.r_.S);
       return 4;
+    },
+    
+    // LOGICAL INSTRUCTIONS
+    // Logical AND with accumulator
+    'AND': function(operands) {
+      var addr_mode = Asm6502.getAddressingMode(operands);
+      var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
+      value = Asm6502.r_.A && value;
+      Asm6502.r_.A = value;
+      Asm6502.setFlag(Asm6502.Flags.ZERO, value === 0);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (value >> 7) === 1);
+      return addr_mode.cycles;      
+    },
+    
+    // EOR
+    'EOR': function(operands) {
+      var addr_mode = Asm6502.getAddressingMode(operands);
+      var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
+      value = Asm6502.r_.A ? !value : value;
+      Asm6502.r_.A = value;
+      Asm6502.setFlag(Asm6502.Flags.ZERO, value === 0);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (value >> 7) === 1);
+      return addr_mode.cycles;
+    },
+    
+    // ORA
+    'ORA': function(operands) {
+      var addr_mode = Asm6502.getAddressingMode(operands);
+      var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
+      value = Asm6502.r_.A || value;
+      Asm6502.r_.A = value;
+      Asm6502.setFlag(Asm6502.Flags.ZERO, value === 0);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (value >> 7) === 1);
+      return addr_mode.cycles;
     }
   }
 };
