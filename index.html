@@ -1,88 +1,184 @@
 <html>
-    <head>
-        <script src="memory.js"></script>
-        <script src="asm6502.js"></script>
-        <script src="asmARM.js"></script>
-        <script src="asmMIPS.js"></script>
-        <script src="asmTHUMB.js"></script>
-        <script src="asmX86.js"></script>
-        <script src="http://code.jquery.com/jquery-latest.js"></script>
-        <script>            
-            var asm_ = {
-                "6502" : new Asm6502(),
-                "ARM" : new AsmARM(),
-                "MIPS" : new AsmMIPS(),
-                "THUMB" : new AsmTHUMB(),
-                "x86" : new AsmX86()
-            };
-            var current_asm_ = "6502";
-            
-            var memory_ = new Memory();
-            
-            function build_page() {
-                // Build asm select.
-                var asm_select = document.getElementById('asm_select');
-                for (var key in asm_) {
-                    var option = document.createElement('option');
-                    option.value = key;
-                    option.appendChild(document.createTextNode(key));
-                    if (key === current_asm_)
-                        option.selected = 'selected';
-                    asm_select.appendChild(option);
-                }
-                // Build the rest of the page.
-                rebuild_page();
-            }
-            
-            function rebuild_page() {
-                // TODO: warn before clearing text.
-                var code_entry = document.getElementById('code_entry');
-                code_entry.text = '';
-                
-                var registers = document.getElementById('registers');
-                asm_[current_asm_].build_register_table(registers);
-                
-                var memory_text = document.getElementById('memory_text');
-                memory_text.text = '';
-                
-                var memory_video = document.getElementById('memory_video');
+  <head>
+  	<link rel="stylesheet" type="text/css" href="style.css">
+    <script src="util.js"></script>
+    <script src="memory.js"></script>
+    <script src="asm6502.js"></script>
+    <script src="asmARM.js"></script>
+    <script src="asmMIPS.js"></script>
+    <script src="asmTHUMB.js"></script>
+    <script src="asmX86.js"></script>
+    <script src="asmZ80.js"></script>
+    <script src="http://code.jquery.com/jquery-latest.js"></script>
+    <script>            
+      var asm_ = {
+        '6502': Asm6502
+      };
+
+      var current_asm_ = '6502';
+
+      var labels_ = {};
+      var lines_ = [];
+
+      function build_page() {
+        // Build asm select.
+        var asm_select = document.getElementById('asm_select');
+        for (var key in asm_) {
+          var option = document.createElement('option');
+          option.value = key;
+          option.appendChild(document.createTextNode(key));
+          if (key === current_asm_)
+            option.selected = 'selected';
+          asm_select.appendChild(option);
+        }
+        
+				var code_entry = document.getElementById('code_entry');
+        code_entry.onkeydown = checkTab;
+
+        // Build the rest of the page.
+        rebuild_page();
+      }
+      
+      function rebuild_page() {
+        lines_.length = 0;
+        labels_.length = 0;
+        asm_[current_asm_].initialize();
+        execution_line_ = 0;
+        
+        // TODO: warn before clearing text.
+        //var code_entry = document.getElementById('code_entry');
+        //code_entry.text = '';
+        
+        var registers = document.getElementById('registers');
+        asm_[current_asm_].updateRegisterView(registers);
+        
+        var memory_text = document.getElementById('memory_text');
+        var memory_video = document.getElementById('memory_video');
+        Memory.initialize(memory_text, memory_video);
+      }
+      
+      function get_selected_asm() {
+        var asm_select = document.getElementById('asm_select');
+        return asm_select.options[asm_select.selectedIndex].value;
+      }
+      
+      function on_asm_changed() {
+        var selected_asm = get_selected_asm();
+        if (selected_asm !== current_asm_) {
+          current_asm_ = selected_asm;
+      		asm_[current_asm_].initialize();
+          rebuild_page();
+        }
+      }
+      
+      // TODO: edit and continue
+      var execution_line_ = 0;
+      
+      function on_run_click() {
+        // TODO: change 'run' to 'pause'.
+        lines_ = document.getElementById('code_entry').value.split('\n');
+        
+        for (var i = 0; i < lines_.length; ++i) {
+          if (lines_[i].match('^.') === '.')
+            labels_[lines_.substr(1)] = i;
+        }
+        
+        // Check for 'start' label.
+        var execution_line_ = 0;
+        if (labels_['start'] != undefined)
+          execution_line_ = labels_['start'] + 1;
+        
+        window.setTimeout(execute_line, 1);
+      }
+      
+      function execute_line() {
+        var line = lines_[execution_line_];
+        
+        var instruction = line.split(' ')[0];
+        var op = asm_[current_asm_].instruction_map_[instruction];
+        if (op === undefined || op === null) {
+          console.error('unknown instruction \'' + instruction + '\'');
+          return;
+        }
+        
+        try {
+          var time_taken = op(line.split(' ')[1]);
+          // TODO: skip comments and branch labels.
+          ++execution_line_;
+          
+          // FIXME: exiting one line too early or calling the timeout one time too many.
+          if (execution_line_ == lines_.length) {
+            console.log('COMPLETE');
+            return;
+          }
+          
+          window.setTimeout(execute_line, time_taken);
+                  
+          var registers = document.getElementById('registers');
+          asm_[current_asm_].updateRegisterView(registers);
+        } catch (e) {
+          if (e.stack)
+            console.error(e.stack);
+          else if (e.message)
+            console.error(e.message);
+          else
+            console.error(e);
+        }
+      }
+      
+      function on_stop_click() {
+      }
+
+      // Set desired tab-defaults to eight space softtab
+      var tab = "        ";
+       
+      function checkTab(evt) {
+        var t = evt.target;
+        var ss = t.selectionStart;
+        var se = t.selectionEnd;
  
-                if (elem && elem.getContext) {
-                    var context = memory_video.getContext('2d');
-                    if (context) {
-                        context.fillStyle('#000');
-                        context.fillRect(0, 0, memory_video.width, memory_video.height);
-                    }
-                }
+        if (evt.keyCode === 9) {
+          evt.preventDefault();
+
+          if (ss != se && t.value.slice(ss, se).indexOf('\n') != -1) {
+            // Special case of multi line selection
+            // In case selection was not of entire lines (e.g. selection begins in the middle of a line)
+            // we ought to tab at the beginning as well as at the start of every following line.
+            var pre = t.value.slice(0,ss);
+            var sel = t.value.slice(ss,se).replace('/\n/g', '\n' + tab);
+            var post = t.value.slice(se,t.value.length);
+            t.value = pre.concat(tab).concat(sel).concat(post);
+                   
+            t.selectionStart = ss + tab.length;
+            t.selectionEnd = se + tab.length;
+          } else {
+            // "Normal" case (no selection or selection on one line only)
+            t.value = t.value.slice(0,ss).concat(tab).concat(t.value.slice(ss,t.value.length));
+            if (ss === se) {
+              t.selectionStart = t.selectionEnd = ss + tab.length;
+            } else {
+              t.selectionStart = ss + tab.length;
+              t.selectionEnd = se + tab.length;
             }
-            
-            function get_selected_asm() {
-                var asm_select = document.getElementById('asm_select');
-                return asm_select.options[asm_select.selectedIndex].value;
-            }
-            
-            function on_asm_changed() {
-                var selected_asm = get_selected_asm();
-                if (selected_asm !== current_asm_) {
-                    current_asm_ = selected_asm;
-                    rebuild_page();
-                }
-            }
-              
-            $(document).ready(build_page);
-        </script>
-    </head>
-    <body>
-        <div id="control_panel">
-            <form>
-                <select id="asm_select" onchange="on_asm_changed();"></select>
-                <button id="continue_button" onclick="on_continue_click();">Continue</button>
-                <button id="step_button" onclick="on_step_click();">Step</button>
-            </form>
-        </div>
-        <textarea id="code_entry"></textarea>
-        <table id="registers"></table>
-        <textarea id="memory_text"></textarea>
-        <canvas id="memory_video" width="256" height="256"></canvas>
-    </body>
+          }
+        }
+      }
+        
+      $(document).ready(build_page);
+    </script>
+  </head>
+  <body>
+    <div id="control_panel">
+      <form onsubmit="return false;">
+        <select id="asm_select" onchange="on_asm_changed();"></select>
+        <button id="run_button" onclick="on_run_click();">Run</button>
+        <button id="step_button" onclick="on_step_click();" disabled="disabled">Step</button>
+        <button id="stop_button" onclick="on_stop_click();">Stop</button>
+      </form>
+    </div>
+    <textarea id="code_entry" rows="16" cols="40"></textarea>
+    <div id="registers"></div>
+    <canvas id="memory_video" width="256px" height="256px" style="float:right;"></canvas>
+    <div id="memory_text"></div>
+  </body>
 </html>
