@@ -67,6 +67,10 @@ Asm6502 = {
     else
       Asm6502.r_.P &= ~(1 << Asm6502.Flags[f]);
   },
+  
+  getFlag: function(f) {
+    return Asm6502.r_.P & (1 << Asm6502.Flags[f]);
+  }
 
   // TODO: page crossing cycle counts.
   getAddressingMode: function(operands) {
@@ -301,6 +305,46 @@ Asm6502 = {
       Asm6502.setFlag(Asm6502.Flags.ZERO, value === 0);
       Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (value >> 7) === 1);
       return addr_mode.cycles;
+    },
+    
+    
+    // ARITHMETIC INSTRUCTIONS
+    // Add with carry
+    'ADC': function(operands) {
+      var addr_mode = Asm6502.getAddressingMode(operands);
+      var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
+      if (getFlag(Asm6502.Flags.DECIMAL))
+        value = toBCD(value);
+      
+      var result = Asm6502.r_.A + value;
+      
+      Asm6502.setFlag(Asm6502.Flags.ZERO, result === 0);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (result >> 7) === 1);
+      Asm6502.setFlag(Asm6502.Flags.CARRY, result > 0xFF);
+      Asm6502.setFlag(Asm6502.Flags.OVERFLOW, (Asm6502.r_.A ^ value) & 0x80);
+        
+      Asm6502.r_.A = (result & 0xFF);
+    },
+    
+    'DEC': function(operands) {
+    },
+    
+    'DEX': function(operands) {
+    },
+    
+    'DEY': function(operands) {
+    },
+    
+    'INC': function(operands) {
+    },
+    
+    'INX': function(operands) {
+    },
+    
+    'INY': function(operands) {
+    },
+    
+    'SBC': function(operands) {
     }
   }
 };

@@ -5,3 +5,9 @@ function decToHex(dec, pad) {
 		hex = '0' + hex;
 	return hex;
 }
+
+function toBCD(dec) {
+  var h = decToHex(d);
+  var s = h.toString(10);
+  return parseInt(s, 10);
+}
