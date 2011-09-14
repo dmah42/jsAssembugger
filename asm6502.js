@@ -13,8 +13,9 @@ Asm6502 = {
     ZERO_PAGE_INDEX: 2,
     ABSOLUTE: 3,
     ABSOLUTE_INDEX: 4,
-    INDIRECT_X: 5,
-    INDIRECT_Y: 6
+    INDIRECT: 5,
+    INDIRECT_X: 6,
+    INDIRECT_Y: 7
   },
   
   initialize: function() {
@@ -96,6 +97,13 @@ Asm6502 = {
       return { mode: (RegExp.$1.length <= 2) ? Asm6502.AddressingMode.ZERO_PAGE_INDEX : Asm6502.AddressingMode.ABSOLUTE_INDEX,
                address: parseInt(RegExp.$1, 16) + Asm6502.r_[RegExp.$2],
                cycles: 4 };
+    }
+    
+    match = operands.match(/^\(\$([0-9]{1,4})\)$/);
+    if (match !== null) {
+      return { mode: Asm6502.AddressingMode.INDIRECT,
+               address: parseInt(RegExp.$1, 16),
+               cycles: 5 };
     }
     
     // (indirect,X)
@@ -330,9 +338,9 @@ Asm6502 = {
     'DEC': function(operands) {
       var addr_mode = Asm6502.getAddressingMode(operands);
       // TODO: check for ZERO_PAGE_INDEX_X
-      if (addr_mode === Asm6502.AddressingMode.IMMEDIATE ||
-          addr_mode === Asm6502.AddressingMode.INDEX_X ||
-          addr_mode === Asm6502.AddressingMode.INDEX_Y) {
+      if (addr_mode.mode === Asm6502.AddressingMode.IMMEDIATE ||
+          addr_mode.mode === Asm6502.AddressingMode.INDEX_X ||
+          addr_mode.mode === Asm6502.AddressingMode.INDEX_Y) {
         throw 'Invalid addressing mode';
       }
 
@@ -365,9 +373,9 @@ Asm6502 = {
     'INC': function(operands) {
       var addr_mode = Asm6502.getAddressingMode(operands);
       // TODO: check for ZERO_PAGE_INDEX_X
-      if (addr_mode === Asm6502.AddressingMode.IMMEDIATE ||
-          addr_mode === Asm6502.AddressingMode.INDEX_X ||
-          addr_mode === Asm6502.AddressingMode.INDEX_Y) {
+      if (addr_mode.mode === Asm6502.AddressingMode.IMMEDIATE ||
+          addr_mode.mode === Asm6502.AddressingMode.INDEX_X ||
+          addr_mode.mode === Asm6502.AddressingMode.INDEX_Y) {
         throw 'Invalid addressing mode';
       }
 
@@ -418,7 +426,7 @@ Asm6502 = {
     'ASL': function(operands) {
       var addr_mode = Asm6502.getAddressingMode(operands);
 
-      if (addr_mode === Asm6502.AddressingMode.INDEX_X || addr_mode === Asm6502.AddressingMode.INDEX_Y)
+      if (addr_mode.mode === Asm6502.AddressingMode.INDEX_X || addr_mode.mode === Asm6502.AddressingMode.INDEX_Y)
         throw 'Invalid addressing mode';
 
       var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
@@ -438,7 +446,7 @@ Asm6502 = {
     'LSR': function(operands) {
       var addr_mode = Asm6502.getAddressingMode(operands);
 
-      if (addr_mode === Asm6502.AddressingMode.INDEX_X || addr_mode === Asm6502.AddressingMode.INDEX_Y)
+      if (addr_mode.mode === Asm6502.AddressingMode.INDEX_X || addr_mode.mode === Asm6502.AddressingMode.INDEX_Y)
         throw 'Invalid addressing mode';
 
       var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
@@ -457,7 +465,7 @@ Asm6502 = {
     'ROL': function(operands) {
       var addr_mode = Asm6502.getAddressingMode(operands);
 
-      if (addr_mode === Asm6502.AddressingMode.INDEX_X || addr_mode === Asm6502.AddressingMode.INDEX_Y)
+      if (addr_mode.mode === Asm6502.AddressingMode.INDEX_X || addr_mode.mode === Asm6502.AddressingMode.INDEX_Y)
         throw 'Invalid addressing mode';
 
       var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
@@ -478,7 +486,7 @@ Asm6502 = {
     'ROR': function(operands) {
       var addr_mode = Asm6502.getAddressingMode(operands);
 
-      if (addr_mode === Asm6502.AddressingMode.INDEX_X || addr_mode === Asm6502.AddressingMode.INDEX_Y)
+      if (addr_mode.mode === Asm6502.AddressingMode.INDEX_X || addr_mode.mode === Asm6502.AddressingMode.INDEX_Y)
         throw 'Invalid addressing mode';
 
       var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
@@ -493,6 +501,49 @@ Asm6502 = {
       Asm6502.setFlag(Asm6502.Flags.CARRY, (Asm6502.r_.A & 0x1) == 1);
 
       Asm6502.r_.A = (result & 0xFF);
+    },
+    
+    // SUBROUTINE OPERATIONS
+    // Jump
+    'JMP': function(operands) {
+      var addr_mode = Asm6502.getAddressingMode(operands);
+      if (addr_mode.mode !== Asm6502.AddressingMode.ABSOLUTE && addr_mode.mode !== Asm6502.AddressingMode.INDEX)
+        throw 'Invalid addressing mode';
+      
+      var value = (addr_mode.mode === Asm6502.AddressingMode.ABSOLUTE) ? addr_mode.address : Memory.readWord(addr_mode.address);
+      Asm6502.r_.PC = value;
+      // TODO: jump to address in engine.
+    },
+    
+    // Jump subroutine
+    'JSR': function(operands) {
+      Memory.writeWord(0x0100 + Asm6502.r_.S, Asm6502.r_.PC);
+      Asm6502.r_.S += 2;
+      Memory.writeByte(0x0100 + Asm6502.r_.S, Asm6502.r_.P);
+      ++Asm6502.r_.S;
+
+      var addr_mode = Asm6502.getAddressingMode(operands);
+      if (addr_mode.mode !== Asm6502.AddressingMode.ABSOLUTE)
+        throw 'Invalid addressing mode';
+
+      Asm6502.r_.PC = addr_mode.address;
+      // TODO: jump to address in engine.      
+    },
+    
+    // Return from interrupt
+    'RTI': function(operands) {
+      --Asm6502.r_.S;
+      Asm6502.r_.P = Memory.readByte(0x0100 + Asm6502.r_.S);
+      Asm6502.r_.S -= 2;
+      Asm6502.r_.PC = Memory.readWord(0x0100 + Asm6502.r_.S);
+    },
+    
+    // Return from subroutine
+    'RTS': function(operands) {
+      --Asm6502.r_.S;
+      Asm6502.r_.P = Memory.readByte(0x0100 + Asm6502.r_.S);
+      Asm6502.r_.S -= 2;
+      Asm6502.r_.PC = Memory.readWord(0x0100 + Asm6502.r_.S);
     }
   }
 };
