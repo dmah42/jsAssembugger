@@ -136,7 +136,7 @@ Asm6502 = {
       var addr_mode = Asm6502.getAddressingMode(operands);
       // TODO: check for ZERO_PAGE_INDEX_X
       if (addr_mode === Asm6502.AddressingMode.INDEX_X || addr_mode === Asm6502.AddressingMode.INDEX_Y)
-        throw 'Invalid index addressing mode for LDX';
+        throw 'Invalid addressing mode';
 
       var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
       Asm6502.r_.X = value;
@@ -150,7 +150,7 @@ Asm6502 = {
       var addr_mode = Asm6502.getAddressingMode(operands);
       // TODO: check for ZERO_PAGE_INDEX_X
       if (addr_mode === Asm6502.AddressingMode.INDEX_X || addr_mode === Asm6502.AddressingMode.INDEX_Y)
-        throw 'Invalid index addressing mode for LDX';
+        throw 'Invalid addressing mode';
 
       var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
       Asm6502.r_.Y = value;
@@ -163,7 +163,7 @@ Asm6502 = {
     'STA': function(operands) {
       var addr_mode = Asm6502.getAddressingMode(operands);
       if (addr_mode.mode === Asm6502.AddressingMode.IMMEDIATE)
-        throw 'Invalid immediate addressing mode for STA';
+        throw 'Invalid addressing mode';
 
       Memory.writeByte(addr_mode.address, Asm6502.r_.A);
       return addr_mode.cycles;
@@ -175,7 +175,7 @@ Asm6502 = {
       if (addr_mode.mode !== Asm6502.AddressingMode.ZERO_PAGE &&
           addr_mode.mode !== Asm6502.AddressingMode.ZERO_PAGE_INDEX &&
           addr_mode.mode !== Asm6502.AddressingMode.ABSOLUTE) {
-        throw 'Invalid addressing mode for STA';
+        throw 'Invalid addressing mode';
       }
 
       Memory.writeByte(addr_mode.address, Asm6502.r_.X);
@@ -188,7 +188,7 @@ Asm6502 = {
       if (addr_mode.mode !== Asm6502.AddressingMode.ZERO_PAGE &&
           addr_mode.mode !== Asm6502.AddressingMode.ZERO_PAGE_INDEX &&
           addr_mode.mode !== Asm6502.AddressingMode.ABSOLUTE) {
-        throw 'Invalid addressing mode for STA';
+        throw 'Invalid addressing mode';
       }
 
       Memory.writeByte(addr_mode.address, Asm6502.r_.Y);
@@ -333,7 +333,7 @@ Asm6502 = {
       if (addr_mode === Asm6502.AddressingMode.IMMEDIATE ||
           addr_mode === Asm6502.AddressingMode.INDEX_X ||
           addr_mode === Asm6502.AddressingMode.INDEX_Y) {
-        throw 'Invalid index addressing mode for LDX';
+        throw 'Invalid addressing mode';
       }
 
       var value = Memory.readByte(addr_mode.address) - 1;
@@ -368,7 +368,7 @@ Asm6502 = {
       if (addr_mode === Asm6502.AddressingMode.IMMEDIATE ||
           addr_mode === Asm6502.AddressingMode.INDEX_X ||
           addr_mode === Asm6502.AddressingMode.INDEX_Y) {
-        throw 'Invalid index addressing mode for LDX';
+        throw 'Invalid addressing mode';
       }
 
       var value = Memory.readByte(addr_mode.address) + 1;
@@ -410,6 +410,88 @@ Asm6502 = {
       Asm6502.setFlag(Asm6502.Flags.CARRY, result > 0xFF);
       Asm6502.setFlag(Asm6502.Flags.OVERFLOW, (Asm6502.r_.A ^ value) & 0x80);
         
+      Asm6502.r_.A = (result & 0xFF);
+    },
+    
+    // BIT MANIPULATION OPERATIONS
+    // Arithmetic shift left
+    'ASL': function(operands) {
+      var addr_mode = Asm6502.getAddressingMode(operands);
+
+      if (addr_mode === Asm6502.AddressingMode.INDEX_X || addr_mode === Asm6502.AddressingMode.INDEX_Y)
+        throw 'Invalid addressing mode';
+
+      var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
+      if (getFlag(Asm6502.Flags.DECIMAL))
+        value = toBCD(value);
+      
+      var result = Asm6502.r_.A << value;
+      
+      Asm6502.setFlag(Asm6502.Flags.ZERO, result === 0);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (result >> 7) === 1);
+      Asm6502.setFlag(Asm6502.Flags.CARRY, result > 0xFF);
+        
+      Asm6502.r_.A = (result & 0xFF);
+    },
+    
+    // Logical shift right
+    'LSR': function(operands) {
+      var addr_mode = Asm6502.getAddressingMode(operands);
+
+      if (addr_mode === Asm6502.AddressingMode.INDEX_X || addr_mode === Asm6502.AddressingMode.INDEX_Y)
+        throw 'Invalid addressing mode';
+
+      var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
+      if (getFlag(Asm6502.Flags.DECIMAL))
+        value = toBCD(value);
+      
+      var result = Asm6502.r_.A >> value;
+      
+      Asm6502.setFlag(Asm6502.Flags.ZERO, result === 0);
+      Asm6502.setFlag(Asm6502.Flags.CARRY, (Asm6502.r_.A & 0x1) == 1);
+
+      Asm6502.r_.A = (result & 0xFF);
+    },
+    
+    // Rotate left
+    'ROL': function(operands) {
+      var addr_mode = Asm6502.getAddressingMode(operands);
+
+      if (addr_mode === Asm6502.AddressingMode.INDEX_X || addr_mode === Asm6502.AddressingMode.INDEX_Y)
+        throw 'Invalid addressing mode';
+
+      var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
+      if (getFlag(Asm6502.Flags.DECIMAL))
+        value = toBCD(value);
+      
+      var result = Asm6502.r_.A << value;
+      result |= (Asm6502.r_.A >> 7);
+      
+      Asm6502.setFlag(Asm6502.Flags.ZERO, result === 0);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (result >> 7) === 1);
+      Asm6502.setFlag(Asm6502.Flags.CARRY, (Asm6502.r_.A & 0x1) == 1);
+
+      Asm6502.r_.A = (result & 0xFF);
+    },
+    
+    // Rotate right
+    'ROR': function(operands) {
+      var addr_mode = Asm6502.getAddressingMode(operands);
+
+      if (addr_mode === Asm6502.AddressingMode.INDEX_X || addr_mode === Asm6502.AddressingMode.INDEX_Y)
+        throw 'Invalid addressing mode';
+
+      var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
+      if (getFlag(Asm6502.Flags.DECIMAL))
+        value = toBCD(value);
+      
+      var result = Asm6502.r_.A >> value;
+      result |= (Asm6502.r_.A & 0x1) << 7;
+      
+      Asm6502.setFlag(Asm6502.Flags.ZERO, result === 0);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (result >> 7) === 1);
+      Asm6502.setFlag(Asm6502.Flags.CARRY, (Asm6502.r_.A & 0x1) == 1);
+
       Asm6502.r_.A = (result & 0xFF);
     }
   }
