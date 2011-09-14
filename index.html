@@ -9,12 +9,9 @@
     <script src="asmTHUMB.js"></script>
     <script src="asmX86.js"></script>
     <script src="asmZ80.js"></script>
+    <script src="engine.js"></script>
     <script src="http://code.jquery.com/jquery-latest.js"></script>
-    <script>            
-      var asm_ = {
-        '6502': Asm6502
-      };
-
+    <script>
       var current_asm_ = '6502';
 
       var labels_ = {};
@@ -23,7 +20,7 @@
       function build_page() {
         // Build asm select.
         var asm_select = document.getElementById('asm_select');
-        for (var key in asm_) {
+        for (var key in Engine.asm_) {
           var option = document.createElement('option');
           option.value = key;
           option.appendChild(document.createTextNode(key));
@@ -41,17 +38,11 @@
       }
       
       function rebuild_page() {
-        lines_.length = 0;
-        labels_.length = 0;
-        asm_[current_asm_].initialize();
-        execution_line_ = 0;
+        Engine.initialize(current_asm_, document.getElementById('registers'));
         
         // TODO: warn before clearing text.
         //var code_entry = document.getElementById('code_entry');
         //code_entry.text = '';
-        
-        var registers = document.getElementById('registers');
-        asm_[current_asm_].updateRegisterView(registers);
         
         var memory_text = document.getElementById('memory_text');
         var memory_video = document.getElementById('memory_video');
@@ -67,72 +58,63 @@
         var selected_asm = get_selected_asm();
         if (selected_asm !== current_asm_) {
           current_asm_ = selected_asm;
-      		asm_[current_asm_].initialize();
           rebuild_page();
         }
       }
       
-      // TODO: edit and continue
-      var execution_line_ = 0;
-      
-      function on_run_click() {
-        // TODO: change 'run' to 'pause'.
-        lines_ = document.getElementById('code_entry').value.split('\n');
-        
-        for (var i = 0; i < lines_.length; ++i) {
-          if (lines_[i].match('^.') === '.')
-            labels_[lines_.substr(1)] = i;
-        }
-        
-        // Check for 'start' label.
-        execution_line_ = 0;
-        if (labels_['start'] != undefined)
-          execution_line_ = labels_['start'] + 1;
-        
-        window.setTimeout(execute_line, 1);
+      function on_run_to_start_click() {
+        Engine.runToStart(document.getElementById('code_entry').value.split('\n'));
+        // TODO: edit and continue.
+        document.getElementById('code_entry').readonly = 'readonly';
+        document.getElementById('run_to_start_button').disabled = 'disabled';
+        document.getElementById('pause_button').disabled = 'disabled';
+        document.getElementById('continue_button').disabled = '';
+        document.getElementById('step_button').disabled = '';
+        document.getElementById('stop_button').disabled = '';
       }
-      
-      function execute_line() {
-        var line = lines_[execution_line_];
-        
-        var instruction = line.split(' ')[0];
-        console.debug('Executing ' + line);
-        var op = asm_[current_asm_].instruction_map_[instruction];
-        if (op === undefined || op === null) {
-          console.error('unknown instruction \'' + instruction + '\'');
-          return;
-        }
-        
-        try {
-          var time_taken = op(line.split(' ')[1]);
-          var registers = document.getElementById('registers');
-          asm_[current_asm_].updateRegisterView(registers);
 
-          // Queue up the next instruction
-          // TODO: skip comments, blank lines and branch labels.
-          ++execution_line_;
-          
-          if (lines_[execution_line_] === undefined) {
-            console.log('COMPLETE');
-            return;
-          }
-          
-          window.setTimeout(execute_line, time_taken);        
-        } catch (e) {
-          if (e.stack)
-            console.error(e.stack);
-          else if (e.message)
-            console.error(e.message);
-          else
-            console.error(e);
-        }
+      function on_continue_click() {
+        Engine.run();
+        document.getElementById('code_entry').readonly = 'readonly';
+        document.getElementById('run_to_start_button').disabled = 'disabled';
+        document.getElementById('pause_button').disabled = '';
+        document.getElementById('continue_button').disabled = 'disabled';
+        document.getElementById('step_button').disabled = 'disabled';
+        document.getElementById('stop_button').disabled = '';
+      }
+
+      function on_pause_click() {
+        Engine.pause();
+        document.getElementById('code_entry').readonly = 'readonly';
+        document.getElementById('run_to_start_button').disabled = 'disabled';
+        document.getElementById('pause_button').disabled = 'disabled';
+        document.getElementById('continue_button').disabled = '';
+        document.getElementById('step_button').disabled = '';
+        document.getElementById('stop_button').disabled = '';
+      }
+
+      function on_step_click() {
+        Engine.step();
+        document.getElementById('code_entry').readonly = 'readonly';
+        document.getElementById('run_to_start_button').disabled = 'disabled';
+        document.getElementById('pause_button').disabled = 'disabled';
+        document.getElementById('continue_button').disabled = '';
+        document.getElementById('step_button').disabled = '';
+        document.getElementById('stop_button').disabled = '';
       }
       
       function on_stop_click() {
+        Engine.reset();
+        document.getElementById('code_entry').readonly = '';
+        document.getElementById('run_to_start_button').disabled = '';
+        document.getElementById('pause_button').disabled = 'disabled';
+        document.getElementById('continue_button').disabled = 'disabled';
+        document.getElementById('step_button').disabled = 'disabled';
+        document.getElementById('stop_button').disabled = 'disabled';
       }
 
       // Set desired tab-defaults to eight space softtab
-      var tab = "        ";
+      var tab = "  ";
        
       function checkTab(evt) {
         var t = evt.target;
@@ -173,9 +155,11 @@
     <div id="control_panel">
       <form onsubmit="return false;">
         <select id="asm_select" onchange="on_asm_changed();"></select>
-        <button id="run_button" onclick="on_run_click();">Run</button>
+        <button id="run_to_start_button" onclick="on_run_to_start_click();">Run to start</button>
+        <button id="continue_button" onclick="on_continue_click();" disabled="disabled">Continue</button>
+        <button id="pause_button" onclick="on_pause_click();" disabled="disabled">Pause</button>
         <button id="step_button" onclick="on_step_click();" disabled="disabled">Step</button>
-        <button id="stop_button" onclick="on_stop_click();">Stop</button>
+        <button id="stop_button" onclick="on_stop_click();" disabled="disabled">Stop</button>
       </form>
     </div>
     <textarea id="code_entry" rows="16" cols="40"></textarea>
