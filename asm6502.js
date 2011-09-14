@@ -8,14 +8,15 @@ Asm6502 = {
   },
   
   AddressingMode: {
-    IMMEDIATE: 0,
-    ZERO_PAGE: 1,
-    ZERO_PAGE_INDEX: 2,
-    ABSOLUTE: 3,
-    ABSOLUTE_INDEX: 4,
-    INDIRECT: 5,
-    INDIRECT_X: 6,
-    INDIRECT_Y: 7
+    ACCUMULATOR: 0,
+    IMMEDIATE: 1,
+    ZERO_PAGE: 2,
+    ZERO_PAGE_INDEX: 3,
+    ABSOLUTE: 4,
+    ABSOLUTE_INDEX: 5,
+    INDIRECT: 6,
+    INDIRECT_X: 7,
+    INDIRECT_Y: 8
   },
   
   initialize: function() {
@@ -75,6 +76,13 @@ Asm6502 = {
 
   // TODO: page crossing cycle counts.
   getAddressingMode: function(operands) {
+    // accumulator
+    if (operands == 'A') {
+      return { mode: Asm6502.AddressingMode.ACCUMULATOR,
+               value: Asm6502.r_.A,
+               cycles: 0 };
+    }
+
     // immediate
     var match = operands.match(/^#([0-9A-Z]{2})$/);
     if (match !== null) {
@@ -96,7 +104,7 @@ Asm6502 = {
     if (match !== null) {
       return { mode: (RegExp.$1.length <= 2) ? Asm6502.AddressingMode.ZERO_PAGE_INDEX : Asm6502.AddressingMode.ABSOLUTE_INDEX,
                address: parseInt(RegExp.$1, 16) + Asm6502.r_[RegExp.$2],
-               cycles: 4 };
+               cycles: 6 };
     }
     
     match = operands.match(/^\(\$([0-9]{1,4})\)$/);
@@ -419,6 +427,7 @@ Asm6502 = {
       Asm6502.setFlag(Asm6502.Flags.OVERFLOW, (Asm6502.r_.A ^ value) & 0x80);
         
       Asm6502.r_.A = (result & 0xFF);
+      return addr_mode.cycles;
     },
     
     // BIT MANIPULATION OPERATIONS
@@ -440,6 +449,7 @@ Asm6502 = {
       Asm6502.setFlag(Asm6502.Flags.CARRY, result > 0xFF);
         
       Asm6502.r_.A = (result & 0xFF);
+      return addr_mode.cycles + 2;
     },
     
     // Logical shift right
@@ -459,6 +469,7 @@ Asm6502 = {
       Asm6502.setFlag(Asm6502.Flags.CARRY, (Asm6502.r_.A & 0x1) == 1);
 
       Asm6502.r_.A = (result & 0xFF);
+      return addr_mode.cycles + 2;
     },
     
     // Rotate left
@@ -480,6 +491,7 @@ Asm6502 = {
       Asm6502.setFlag(Asm6502.Flags.CARRY, (Asm6502.r_.A & 0x1) == 1);
 
       Asm6502.r_.A = (result & 0xFF);
+      return addr_mode.cycles + 2;
     },
     
     // Rotate right
@@ -501,6 +513,7 @@ Asm6502 = {
       Asm6502.setFlag(Asm6502.Flags.CARRY, (Asm6502.r_.A & 0x1) == 1);
 
       Asm6502.r_.A = (result & 0xFF);
+      return addr_mode.cycles + 2;
     },
     
     // SUBROUTINE OPERATIONS
@@ -513,6 +526,7 @@ Asm6502 = {
       var value = (addr_mode.mode === Asm6502.AddressingMode.ABSOLUTE) ? addr_mode.address : Memory.readWord(addr_mode.address);
       Asm6502.r_.PC = value;
       // TODO: jump to address in engine.
+      return addr_mode.cycles - 1;
     },
     
     // Jump subroutine
@@ -527,7 +541,8 @@ Asm6502 = {
         throw 'Invalid addressing mode';
 
       Asm6502.r_.PC = addr_mode.address;
-      // TODO: jump to address in engine.      
+      // TODO: jump to address in engine.
+      return 6;
     },
     
     // Return from interrupt
@@ -536,6 +551,7 @@ Asm6502 = {
       Asm6502.r_.P = Memory.readByte(0x0100 + Asm6502.r_.S);
       Asm6502.r_.S -= 2;
       Asm6502.r_.PC = Memory.readWord(0x0100 + Asm6502.r_.S);
+      return 6;
     },
     
     // Return from subroutine
@@ -544,6 +560,74 @@ Asm6502 = {
       Asm6502.r_.P = Memory.readByte(0x0100 + Asm6502.r_.S);
       Asm6502.r_.S -= 2;
       Asm6502.r_.PC = Memory.readWord(0x0100 + Asm6502.r_.S);
+      return 6;
+    },
+    
+    // COMPARISON INSTRUCTIONS
+    // Bit test
+    'BIT': function(operands) {
+      var addr_mode = getAddressingMode(operands);
+      if (addr_mode.mode !== Asm6502.AddressingMode.ABSOLUTE &&
+          addr_mode.mode !== Asm6502.AddressingMode.ZEROPAGE) {
+        throw 'Invalid addressing mode';
+      }
+      
+      var value = Memory.readByte(addr_mode.address);
+      var result = value & Asm6502.r_.A;
+      Asm6502.setFlag(Asm6502.Flags.ZERO, result === 0);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (result >> 7) === 1);
+      Asm6502.setFlag(Asm6502.Flags.OVERFLOW, (result >> 6) === 1);
+      
+      return addr_mode.cycles;
+    },
+    
+    // Compare with accumulator
+    'CMP': function(operands) {
+      var addr_mode = Asm6502.getAddressingMode(operands);
+      var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
+      if (getFlag(Asm6502.Flags.DECIMAL))
+        value = toBCD(value);
+      
+      var result = Asm6502.r_.A - value;
+      
+      Asm6502.setFlag(Asm6502.Flags.ZERO, result === 0);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (result >> 7) === 1);
+      Asm6502.setFlag(Asm6502.Flags.CARRY, result > 0xFF);
+      
+      return addr_mode.cycles;
+    },
+    
+    // Compare with X
+    'CPX': function(operands) {
+      var addr_mode = Asm6502.getAddressingMode(operands);
+      var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
+      if (getFlag(Asm6502.Flags.DECIMAL))
+        value = toBCD(value);
+      
+      var result = Asm6502.r_.X - value;
+      
+      Asm6502.setFlag(Asm6502.Flags.ZERO, result === 0);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (result >> 7) === 1);
+      Asm6502.setFlag(Asm6502.Flags.CARRY, result > 0xFF);
+      
+      return addr_mode.cycles;
+    },
+    
+    // Compare with Y
+    'CPY': function(operands) {
+      
+      var addr_mode = Asm6502.getAddressingMode(operands);
+      var value = (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE) ? (addr_mode.value & 0xFF) : Memory.readByte(addr_mode.address);
+      if (getFlag(Asm6502.Flags.DECIMAL))
+        value = toBCD(value);
+      
+      var result = Asm6502.r_.Y - value;
+      
+      Asm6502.setFlag(Asm6502.Flags.ZERO, result === 0);
+      Asm6502.setFlag(Asm6502.Flags.NEGATIVE, (result >> 7) === 1);
+      Asm6502.setFlag(Asm6502.Flags.CARRY, result > 0xFF);
+      
+      return addr_mode.cycles;
     }
   }
 };
