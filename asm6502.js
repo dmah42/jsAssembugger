@@ -628,6 +628,74 @@ Asm6502 = {
       Asm6502.setFlag(Asm6502.Flags.CARRY, result > 0xFF);
       
       return addr_mode.cycles;
+    },
+    
+    // BRANCHING INSTRUCTIONS
+    // TODO: displacement by non-label
+    // Branch on carry clear
+    'BCC': function(operands) {
+      var cycles = 2;
+      if (getFlag(Asm6502.Flags.CARRY) === 0) {
+        // TODO: cost of page crossing.
+        Engine.jumpToLabel(operands);
+        ++cycles;
+      }
+      return cycles;
+    },
+    
+    // Branch on carry set
+    'BCS': function(operands) {
+      var cycles = 2;
+      if (getFlag(Asm6502.Flags.CARRY) === 1) {
+        // TODO: cost of page crossing.
+        Engine.jumpToLabel(operands);
+        ++cycles;
+      }
+      return cycles;
+    },
+    
+    // Branch on equal
+    'BEQ': function(operands) {
+      var cycles = 2;
+      if (getFlag(Asm6502.Flags.ZERO) === 1) {
+        // TODO: cost of page crossing.
+        Engine.jumpToLabel(operands);
+        ++cycles;
+      }
+      return cycles;
+    },
+    
+    // Branch on minus
+    'BMI': function(operands) {
+      var cycles = 2;
+      if (getFlag(Asm6502.Flags.NEGATIVE) === 1) {
+        // TODO: cost of page crossing.
+        Engine.jumpToLabel(operands);
+        ++cycles;
+      }
+      return cycles;
+    },
+    
+    // Branch on not equal
+    'BNE': function(operands) {
+      var cycles = 2;
+      if (getFlag(Asm6502.Flags.ZERO) === 0) {
+        // TODO: cost of page crossing.
+        Engine.jumpToLabel(operands);
+        ++cycles;
+      }
+      return cycles;
+    },
+    
+    // Branch on plus
+    'BPL': function(operands) {
+      var cycles = 2;
+      if (getFlag(Asm6502.Flags.NEGATIVE) === 0) {
+        // TODO: cost of page crossing.
+        Engine.jumpToLabel(operands);
+        ++cycles;
+      }
+      return cycles;
     }
   }
 };
