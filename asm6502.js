@@ -536,12 +536,16 @@ Asm6502 = {
       Memory.writeByte(0x0100 + Asm6502.r_.S, Asm6502.r_.P);
       ++Asm6502.r_.S;
 
+      // TODO: jump to address in engine.
+      /*
       var addr_mode = Asm6502.getAddressingMode(operands);
       if (addr_mode.mode !== Asm6502.AddressingMode.ABSOLUTE)
         throw 'Invalid addressing mode';
 
       Asm6502.r_.PC = addr_mode.address;
-      // TODO: jump to address in engine.
+      */
+      Engine.setReturnHere();
+      Engine.jumpToLabel(operands);
       return 6;
     },
     
@@ -551,6 +555,10 @@ Asm6502 = {
       Asm6502.r_.P = Memory.readByte(0x0100 + Asm6502.r_.S);
       Asm6502.r_.S -= 2;
       Asm6502.r_.PC = Memory.readWord(0x0100 + Asm6502.r_.S);
+      
+      // TODO: get the name of the label from engine
+      Engine.jumpToLabel('return');
+      
       return 6;
     },
     
@@ -560,6 +568,11 @@ Asm6502 = {
       Asm6502.r_.P = Memory.readByte(0x0100 + Asm6502.r_.S);
       Asm6502.r_.S -= 2;
       Asm6502.r_.PC = Memory.readWord(0x0100 + Asm6502.r_.S);
+      
+      // TODO: Engine hookup to PC
+      // TODO: Get return label from engine.
+      Engine.jumpToLabel('return');
+      
       return 6;
     },
     
