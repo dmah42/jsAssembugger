@@ -696,6 +696,61 @@ Asm6502 = {
         ++cycles;
       }
       return cycles;
+    },
+    
+    // STATUS INSTRUCTIONS
+    // Break
+    'BRK': function(operands) {
+      // TODO: interrupt.
+      Engine.pause();
+      return 1;
+    },
+    
+    // Clear carry
+    'CLC': function(operands) {
+      setFlag(Asm6502.Flags.CARRY, false);
+      return 2;
+    },
+    
+    // Clear decimal
+    'CLD': function(operands) {
+      setFlag(Asm6502.Flags.DECIMAL, false);
+      return 2;
+    },
+    
+    // Clear interrupt
+    'CLI': function(operands) {
+      setFlag(Asm6502.Flags.INTERRUPT, false);
+      return 2;
+    },
+    
+    // Clear overflow
+    'CLV': function(operands) {
+      setFlag(Asm6502.Flags.OVERFLOW, false);
+      return 2;
+    },
+    
+    // NOP
+    'NOP': function(operands) {
+      return 1;
+    },
+    
+    // Set carry
+    'SEC': function(operands) {
+      setFlag(Asm6502.Flags.CARRY, true);
+      return 2;
+    },
+    
+    // Set decimal
+    'SED': function(operands) {
+      setFlag(Asm6502.Flags.DECIMAL, true);
+      return 2;
+    },
+    
+    // Set interrupt
+    'SEI': function(operands) {
+      setFlag(Asm6502.Flags.INTERRUPT, true);
+      return 2;
     }
   }
 };
