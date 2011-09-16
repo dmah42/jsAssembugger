@@ -28,7 +28,6 @@ Engine = {
     register_view_ = null;
     code_ = null;
     labels = {};
-    current_asm_ = null;
   },
 
   setReturnHere: function() {
@@ -36,14 +35,16 @@ Engine = {
   },
   
   jumpToLabel: function(label) {
-    Engine.current_line_ = Engine.labels[label] + 1;
+    Engine.current_line_ = Engine.labels_[label];
   },
 
   runToStart: function(code) {
     Engine.code_ = code;
     for (var i = 0; i < Engine.code_.length; ++i) {
-      if (Engine.code_[i].match('^.') === '.')
+      if (Engine.code_[i].match(/^\./) !== null) {
         Engine.labels_[Engine.code_[i].substr(1)] = i;
+        console.log('Label ' + Engine.code_[i].substr(1) + ' found at ' + i);
+      }
     }
 
     // Check for 'start' label.
@@ -56,10 +57,11 @@ Engine = {
     var time_taken = Engine.step();
     if (time_taken === -1) {
       window.clearTimeout(Engine.timeout_);
-      Engine.reset();
-    } else {
-      Engine.timeout_ = window.setTimeout(Engine.run, time_taken);
+      return -1;
     }
+     
+    Engine.timeout_ = window.setTimeout(Engine.run, time_taken);
+    return time_taken;
   },
   
   pause: function() {
@@ -69,6 +71,17 @@ Engine = {
   step: function() {
     var line = Engine.code_[Engine.current_line_];
     
+    // Skip labels
+    // TODO: skip comments and blank lines.
+    while (line.match(/^\./) !== null) {
+      ++Engine.current_line_;
+      line = Engine.code_[Engine.current_line_];
+      if (line === undefined) {
+        console.log('COMPLETE');
+        return -1;
+      }
+    }
+      
     var instruction = line.split(' ')[0];
     console.debug('Executing ' + line);
 
@@ -99,6 +112,7 @@ Engine = {
         console.error(e.message);
       else
         console.error(e);
+      return -1;
     }
   }
 };

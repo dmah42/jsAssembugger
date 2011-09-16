@@ -31,8 +31,20 @@
         
 				var code_entry = document.getElementById('code_entry');
         code_entry.onkeydown = checkTab;
-        code_entry.innerText = 'LDA #42\nPHA\nLDX #2A\nSTX $00\nLDA $00\nPLA';
-
+        code_entry.innerText = 'LDX #00\nLDY #00\n.outer\n.inner\nTXA\nSTA ($00,X)\nINX\nCPX #FF\nBNE inner\nLDX #00\nINY\nCPY #FF\nBNE outer\n';
+        
+        /*
+        // LSR and addressing test.
+LDX #2F
+STX $1234
+LDX #12
+LDY #31
+STX $2A
+STY $2B
+LDY #03
+LSR ($2A),Y
+LDA $1234
+        */
         // Build the rest of the page.
         rebuild_page();
       }
@@ -63,6 +75,7 @@
       }
       
       function on_run_to_start_click() {
+        rebuild_page();
         Engine.runToStart(document.getElementById('code_entry').value.split('\n'));
         // TODO: edit and continue.
         document.getElementById('code_entry').readonly = 'readonly';
@@ -74,13 +87,19 @@
       }
 
       function on_continue_click() {
-        Engine.run();
-        document.getElementById('code_entry').readonly = 'readonly';
-        document.getElementById('run_to_start_button').disabled = 'disabled';
-        document.getElementById('pause_button').disabled = '';
+        if (Engine.run() === -1) {
+          document.getElementById('code_entry').readonly = '';
+          document.getElementById('run_to_start_button').disabled = '';
+          document.getElementById('pause_button').disabled = 'disabled';
+          document.getElementById('stop_button').disabled = 'disabled';
+        } else {
+          document.getElementById('code_entry').readonly = 'readonly';
+          document.getElementById('run_to_start_button').disabled = 'disabled';
+          document.getElementById('pause_button').disabled = '';
+          document.getElementById('stop_button').disabled = '';
+        }
         document.getElementById('continue_button').disabled = 'disabled';
         document.getElementById('step_button').disabled = 'disabled';
-        document.getElementById('stop_button').disabled = '';
       }
 
       function on_pause_click() {
@@ -94,13 +113,20 @@
       }
 
       function on_step_click() {
-        Engine.step();
-        document.getElementById('code_entry').readonly = 'readonly';
-        document.getElementById('run_to_start_button').disabled = 'disabled';
+        if (Engine.step() === -1) {
+          document.getElementById('code_entry').readonly = '';
+          document.getElementById('run_to_start_button').disabled = '';
+          document.getElementById('continue_button').disabled = 'disabled';
+          document.getElementById('step_button').disabled = 'disabled';
+          document.getElementById('stop_button').disabled = 'disabled';
+        } else {
+          document.getElementById('code_entry').readonly = 'readonly';
+          document.getElementById('run_to_start_button').disabled = 'disabled';
+          document.getElementById('continue_button').disabled = '';
+          document.getElementById('step_button').disabled = '';
+          document.getElementById('stop_button').disabled = '';
+        }
         document.getElementById('pause_button').disabled = 'disabled';
-        document.getElementById('continue_button').disabled = '';
-        document.getElementById('step_button').disabled = '';
-        document.getElementById('stop_button').disabled = '';
       }
       
       function on_stop_click() {
