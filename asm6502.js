@@ -66,9 +66,9 @@ Asm6502 = {
       if (reg === 'S')
         cell.innerHTML = '0x01' + decToHex(Asm6502.r_[reg], 2);
       else if (reg === 'P') {
-        for (var f in Asm6502.Flags) {
-          cell = document.getElementById(reg + '.' + f + '.value');
-          cell.innerHTML = (Asm6502.getFlag(f) === 1);
+        for (var fl in Asm6502.Flags) {
+          cell = document.getElementById(reg + '.' + fl + '.value');
+          cell.innerHTML = (Asm6502.getFlag(fl) === 1);
         }
       } else
         cell.innerHTML = '0x' + decToHex(Asm6502.r_[reg], 2);
@@ -89,7 +89,7 @@ Asm6502 = {
     if (Asm6502.Flags[f] === undefined)
       throw new Error('Unknown flag');
       
-		if (b)
+  	if (b)
       Asm6502.r_.P |= 1 << Asm6502.Flags[f];
     else
       Asm6502.r_.P &= ~(1 << Asm6502.Flags[f]);
@@ -112,7 +112,7 @@ Asm6502 = {
     }
 
     // immediate
-    var match = operands.match(/^#([0-9A-Z]{2})$/);
+    var match = operands.match(/^#\$([0-9A-Z]{2})$/);
     if (match !== null) {
       return { mode: Asm6502.AddressingMode.IMMEDIATE,
                value: parseInt(RegExp.$1, 16),
@@ -367,8 +367,10 @@ Asm6502 = {
       Asm6502.setFlag('CARRY', result > 0xFF);
       Asm6502.setFlag('OVERFLOW', (Asm6502.r_.A ^ value) & 0x80);
         
-        // TODO: write back to address
-      Asm6502.r_.A = (result & 0xFF);
+      if (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE)
+        Asm6502.r_.A = (result & 0xFF);
+      else
+        Memory.writeByte(addr_mode.address, (result & 0xFF));
     },
     
     // Decrement with carry
@@ -455,8 +457,10 @@ Asm6502 = {
       Asm6502.setFlag('CARRY', result > 0xFF);
       Asm6502.setFlag('OVERFLOW', (Asm6502.r_.A ^ value) & 0x80);
         
-        // TODO: write back to address
-      Asm6502.r_.A = (result & 0xFF);
+      if (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE)
+        Asm6502.r_.A = (result & 0xFF);
+      else
+        Memory.writeByte(addr_mode.address, (result & 0xFF));
       return addr_mode.cycles;
     },
     
@@ -478,8 +482,10 @@ Asm6502 = {
       Asm6502.setFlag('NEGATIVE', (result >> 7) === 1);
       Asm6502.setFlag('CARRY', result > 0xFF);
         
-        // TODO: write back to address
-      Asm6502.r_.A = (result & 0xFF);
+      if (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE)
+        Asm6502.r_.A = (result & 0xFF);
+      else
+        Memory.writeByte(addr_mode.address, (result & 0xFF));
       return addr_mode.cycles + 2;
     },
     
@@ -524,8 +530,10 @@ Asm6502 = {
       Asm6502.setFlag('NEGATIVE', (result >> 7) === 1);
       Asm6502.setFlag('CARRY', (Asm6502.r_.A & 0x1) == 1);
 
-      // TODO: write back to address
-      Asm6502.r_.A = (result & 0xFF);
+      if (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE)
+        Asm6502.r_.A = (result & 0xFF);
+      else
+        Memory.writeByte(addr_mode.address, (result & 0xFF));
       return addr_mode.cycles + 2;
     },
     
@@ -547,8 +555,10 @@ Asm6502 = {
       Asm6502.setFlag('NEGATIVE', (result >> 7) === 1);
       Asm6502.setFlag('CARRY', (Asm6502.r_.A & 0x1) == 1);
 
-// TODO: write to address
-      Asm6502.r_.A = (result & 0xFF);
+      if (addr_mode.mode == Asm6502.AddressingMode.IMMEDIATE)
+        Asm6502.r_.A = (result & 0xFF);
+      else
+        Memory.writeByte(addr_mode.address, (result & 0xFF));
       return addr_mode.cycles + 2;
     },
     
