@@ -102,7 +102,6 @@ Asm6502 = {
     return (Asm6502.r_.P & (1 << Asm6502.Flags[f]));
   },
 
-  // TODO: page crossing cycle counts.
   getAddressingMode: function(operands) {
     // accumulator
     if (operands === 'A') {
@@ -130,9 +129,12 @@ Asm6502 = {
     // absolute,X, absolute,Y, or zero page,X
     match = operands.match(/^\$([0-9A-Z]{1,4}),\s*(X|Y)$/);
     if (match !== null) {
+      var address_before_offset = parseInt(RegExp.$1, 16);
+      var address_after_offset = address_before_offset + Asm6502.r_[RegExp.$2];
+      var page_crossed = (Math.floor(address_before_offset / 100) != Math.floor(address_after_offset / 100));
       return { mode: (RegExp.$1.length <= 2) ? Asm6502.AddressingMode.ZERO_PAGE_INDEX : Asm6502.AddressingMode.ABSOLUTE_INDEX,
-               address: parseInt(RegExp.$1, 16) + Asm6502.r_[RegExp.$2],
-               cycles: 6 };
+               address: address_after_offset,
+               cycles: 6 + (page_crossed ? 1 : 0) };
     }
     
     match = operands.match(/^\(\$([0-9A-Z]{1,4})\)$/);
@@ -145,17 +147,23 @@ Asm6502 = {
     // (indirect,X)
     match = operands.match(/^\(\$([0-9A-Z]{1,4}),\s*X\)$/);
     if (match !== null) {
+      var address_before_offset = parseInt(RegExp.$1, 16);
+      var address_after_offset = address_before_offset + Asm6502.r_.X;
+      var page_crossed = (Math.floor(address_before_offset / 100) != Math.floor(address_after_offset / 100));
       return { mode: Asm6502.AddressingMode.INDIRECT_X,
-               address: parseInt(RegExp.$1, 16) + Asm6502.r_.X,
-               cycles: 6 };
+               address: address_after_offset,
+               cycles: 6 + (page_crossed ? 1 : 0) };
     }
     
     // (indirect),Y
     match = operands.match(/^\(\$([0-9A-Z]{1,4})\),\s*Y$/);
     if (match !== null) {
+      var address_before_offset = Memory.readWord(parseInt(RegExp.$1, 16));
+      var address_after_offset = address_before_offset + Asm6502.r_.Y;
+      var page_crossed = (Math.floor(address_before_offset / 100) != Math.floor(address_after_offset / 100));
       return { mode: Asm6502.AddressingMode.INDIRECT_Y,
-               address: Memory.readWord(parseInt(RegExp.$1, 16)) + Asm6502.r_.Y,
-               cycles: 5 };
+               address: address_after_offset,
+               cycles: 5 + (page_crossed ? 1 : 0) };
     }
     
     throw 'Unable to parse addressing mode from \'' + operands + '\'';
